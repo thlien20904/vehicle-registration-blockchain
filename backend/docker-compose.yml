@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  backend:
+    container_name: backend
+    image: node:18
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: bash -c "npm install && node app.js"
+    ports:
+      - "3001:3001"
+    networks:
+      - fabric_test
+
+networks:
+  fabric_test:
+    external: true

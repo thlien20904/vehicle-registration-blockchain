@@ -1,0 +1,22 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Fabric artifacts
+fabric-network/test-network/organizations/
+fabric-network/test-network/ledger/
+fabric-network/test-network/channel-artifacts/
+fabric-network/test-network/peerOrganizations/
+fabric-network/test-network/ordererOrganizations/
+fabric-network/test-network/wallet/
+fabric-network/test-network/logs/
+fabric-network/test-network/docker/
+fabric-network/test-network/*.tar.gz
+
+# Logs and temp
+*.log
+.env
+.DS_Store
+
+# React build
+frontend/build/
