@@ -1,6 +1,5 @@
 'use strict';
 
-// ⚙️ Cấu hình môi trường Fabric CLI
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -10,15 +9,14 @@ const execPromise = util.promisify(exec);
 
 const app = express();
 
-// ✅ Cho phép gọi API từ frontend (localhost:3000)
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
-// 🧩 Cấu hình đường dẫn môi trường CLI
-process.env.PATH = process.env.PATH + ':/home/tlien/go/src/github.com/hyperledger/fabric-samples/bin';
+// Fabric CLI environment
+process.env.PATH += ':/home/tlien/go/src/github.com/hyperledger/fabric-samples/bin';
 process.env.FABRIC_CFG_PATH = '/home/tlien/projects/vehicle-registration-blockchain/fabric-network/config/';
 
-// 🧩 Cấu hình môi trường cho Org1
 const FABRIC_ENV = {
   CORE_PEER_LOCALMSPID: 'Org1MSP',
   CORE_PEER_TLS_ENABLED: 'true',
@@ -29,143 +27,145 @@ const FABRIC_ENV = {
     '/home/tlien/projects/vehicle-registration-blockchain/fabric-network/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp'
 };
 
-// Trạng thái Fabric
+// Fabric status
 let fabricReady = false;
 let lastCheck = null;
 
-// 🔍 Hàm kiểm tra Fabric network
+// Check Fabric network
 async function checkFabricStatus() {
   try {
-    console.log('🔄 Checking Fabric network status...');
-
     const { stdout: dockerOut } = await execPromise('docker ps --format "{{.Names}}"');
-    const containers = dockerOut.split('\n').filter(c => c.includes('example.com') && c.trim() !== '');
-
-    if (containers.length < 5) throw new Error('Not enough Fabric containers are running.');
+    const containers = dockerOut.split('\n').filter(c => c.includes('example.com') && c.trim());
+    if (containers.length < 5) throw new Error('Not enough Fabric containers running.');
 
     const { stdout: channelOut } = await execPromise('peer channel list', {
       cwd: '/home/tlien/projects/vehicle-registration-blockchain/fabric-network/test-network',
       env: { ...process.env, ...FABRIC_ENV }
     });
-
     if (!channelOut.includes('mychannel')) throw new Error('Channel mychannel not found.');
 
-    console.log('✅ Fabric network is healthy.');
     fabricReady = true;
     lastCheck = new Date().toISOString();
-  } catch (error) {
-    console.error('❌ Fabric check failed:', error.message);
+  } catch (err) {
     fabricReady = false;
     lastCheck = new Date().toISOString();
   }
 }
 
-// Middleware kiểm tra Fabric trước khi xử lý API
+// Middleware check Fabric
 app.use(async (req, res, next) => {
   if (!fabricReady) await checkFabricStatus();
   if (!fabricReady) {
-    return res.status(503).json({
-      error: 'Fabric network not ready. Please start test-network.',
-      checkedAt: lastCheck
-    });
+    return res.status(503).json({ error: 'Fabric network not ready', checkedAt: lastCheck });
   }
   next();
 });
 
-// ✅ Health check
+// Health check
 app.get('/health', async (req, res) => {
   await checkFabricStatus();
-  res.json({
-    status: fabricReady ? 'OK' : 'DOWN',
-    fabricReady,
-    checkedAt: lastCheck,
-    timestamp: new Date().toISOString()
-  });
+  res.json({ status: fabricReady ? 'OK' : 'DOWN', fabricReady, checkedAt: lastCheck });
 });
 
-// 🚗 Lấy danh sách tất cả xe
+// Get all vehicles
 app.get('/vehicles', async (req, res) => {
   try {
-    console.log('🔍 Querying vehicles via CLI...');
     const { stdout } = await execPromise(
       'peer chaincode query -C mychannel -n vehicle -c \'{"Args":["getAllVehicles"]}\'',
-      {
-        cwd: '/home/tlien/projects/vehicle-registration-blockchain/fabric-network/test-network',
-        env: { ...process.env, ...FABRIC_ENV }
-      }
+      { cwd: '/home/tlien/projects/vehicle-registration-blockchain/fabric-network/test-network', env: { ...process.env, ...FABRIC_ENV } }
     );
-
-    const trimmed = stdout.trim();
-    if (!trimmed.startsWith('[')) throw new Error(`Unexpected output: ${trimmed}`);
-
-    const vehicles = JSON.parse(trimmed);
-    console.log(`✅ Found ${vehicles.length} vehicles.`);
+    const vehicles = JSON.parse(stdout.trim());
     res.json(vehicles);
-  } catch (error) {
-    console.error('❌ Query error:', error.message);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error('❌ Lỗi lấy danh sách xe:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ➕ Đăng ký xe mới
-// ➕ Đăng ký xe mới
+// Get total vehicle count
+app.get('/vehicles/count', async (req, res) => {
+  try {
+    const { stdout } = await execPromise(
+      'peer chaincode query -C mychannel -n vehicle -c \'{"Args":["count"]}\'',
+      { cwd: '/home/tlien/projects/vehicle-registration-blockchain/fabric-network/test-network', env: { ...process.env, ...FABRIC_ENV } }
+    );
+    const count = parseInt(stdout.trim(), 10);
+    res.json({ count });
+  } catch (err) {
+    console.error('❌ Lỗi khi lấy tổng số xe:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get vehicle by license
+app.get('/vehicles/:license', async (req, res) => {
+  try {
+    const { license } = req.params;
+    const { stdout } = await execPromise(
+      `peer chaincode query -C mychannel -n vehicle -c '{"Args":["queryByLicense","${license}"]}'`,
+      { cwd: '/home/tlien/projects/vehicle-registration-blockchain/fabric-network/test-network', env: { ...process.env, ...FABRIC_ENV } }
+    );
+    if (!stdout.trim() || stdout.trim() === 'null') return res.status(404).json({ error: `Vehicle ${license} not found` });
+    res.json(JSON.parse(stdout.trim()));
+  } catch (err) {
+    console.error('❌ Lỗi khi lấy xe theo biển số:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get vehicle history by license
+app.get('/vehicles/:license/history', async (req, res) => {
+  try {
+    const { license } = req.params;
+    const { stdout } = await execPromise(
+      `peer chaincode query -C mychannel -n vehicle -c '{"Args":["getVehicleHistory","${license}"]}'`,
+      { cwd: '/home/tlien/projects/vehicle-registration-blockchain/fabric-network/test-network', env: { ...process.env, ...FABRIC_ENV } }
+    );
+    const history = JSON.parse(stdout.trim() || '[]');
+    res.json(history);
+  } catch (err) {
+    console.error('❌ Lỗi lấy lịch sử:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Register new vehicle
 app.post('/register', async (req, res) => {
   try {
-    console.log('🔔 /register called - body:', req.body);
+    const { licensePlate, make, model, color, owner } = req.body;
 
-    const { id, make, model, licensePlate, owner } = req.body;
-    // Cho phép dùng licensePlate làm id nếu id không có
-    const vehicleId = id || licensePlate;
+    // Validate required fields
+    const errors = {};
+    if (!licensePlate) errors.licensePlate = 'Vui lòng nhập biển số';
+    else if (!/^[0-9]{2}[A-Z]-[0-9]{5}$/.test(licensePlate))
+      errors.licensePlate = 'Biển số sai định dạng. Ví dụ: 29A-12345';
+    if (!make) errors.make = 'Vui lòng nhập hãng xe';
+    if (!model) errors.model = 'Vui lòng nhập model';
+    if (!color) errors.color = 'Vui lòng nhập màu xe';
+    if (!owner) errors.owner = 'Vui lòng nhập chủ xe';
+    if (Object.keys(errors).length) return res.status(400).json({ errors });
 
-    if (!vehicleId || !make || !model || !licensePlate || !owner) {
-      console.log('❌ Validation failed. Received:', { id, licensePlate, make, model, owner });
-      return res.status(400).json({ error: 'Missing required fields', received: req.body });
-    }
-
-    console.log('🚗 Registering new vehicle:', { vehicleId, make, model, licensePlate, owner });
-
+    // Invoke chaincode
     const cmd = `peer chaincode invoke -o localhost:7050 \
       --ordererTLSHostnameOverride orderer.example.com \
       --tls --cafile $PWD/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem \
       -C mychannel -n vehicle \
       --peerAddresses localhost:7051 --tlsRootCertFiles $PWD/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt \
       --peerAddresses localhost:9051 --tlsRootCertFiles $PWD/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt \
-      -c '{"Args":["registerVehicle","${vehicleId}","${make}","${model}","${licensePlate}","${owner}"]}' --waitForEvent`;
+      -c '{"Args":["registerVehicle","${licensePlate}","${make}","${model}","${color}","${owner}"]}' --waitForEvent`;
 
-    const { stdout, stderr } = await execPromise(cmd, {
-      cwd: '/home/tlien/projects/vehicle-registration-blockchain/fabric-network/test-network',
-      env: { ...process.env, ...FABRIC_ENV }
-    });
+    await execPromise(cmd, { cwd: '/home/tlien/projects/vehicle-registration-blockchain/fabric-network/test-network', env: { ...process.env, ...FABRIC_ENV } });
 
-    console.log('✅ CLI invoke stdout:', stdout);
-    if (stderr) console.error('⚠️ CLI stderr:', stderr);
-
-    // Trích payload nếu có
-    let payload = null;
-    const match = stdout && stdout.match(/payload:"(.*?)"/);
-    if (match) {
-      try { payload = JSON.parse(match[1]); } catch (e) { /* ignore */ }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Xe đăng ký thành công!',
-      payload,
-      output: stdout
-    });
-  } catch (error) {
-    console.error('❌ Register error:', error);
-    res.status(500).json({ error: error.message, stack: error.stack });
+    res.status(200).json({ success: true, message: 'Xe đăng ký thành công' });
+  } catch (err) {
+    console.error('❌ Lỗi khi đăng ký xe:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-
-// 🚀 Khởi chạy server
+// Start server
 const PORT = 3001;
 app.listen(PORT, async () => {
-  console.log(`🚀 Backend CLI server: http://localhost:${PORT}`);
-  console.log(`📋 Health:   GET http://localhost:${PORT}/health`);
-  console.log(`🚗 Vehicles: GET http://localhost:${PORT}/vehicles`);
-  console.log(`➕ Register: POST http://localhost:${PORT}/register`);
   await checkFabricStatus();
+  console.log(`🚀 Backend CLI server running at http://localhost:${PORT}`);
 });

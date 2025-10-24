@@ -1,33 +1,55 @@
 import React from 'react';
 
-const VehicleList = ({ vehicles }) => {
+const VehicleList = ({ vehicles, searchTerm, setSearchTerm }) => {
+  const filteredVehicles = vehicles.filter((v) =>
+    v.Key.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="card">
-      <div className="card-header">Danh sách xe (On-Chain)</div>
+    <div className="card mt-3 shadow-sm">
+      <div className="card-header bg-dark text-white fw-bold">
+        🚗 Danh sách xe (Blockchain Ledger)
+      </div>
+
       <div className="card-body">
-        {vehicles.length === 0 ? (
-          <p>Chưa có xe nào.</p>
+        {/* 🔍 Ô tìm kiếm */}
+        <div className="mb-3">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="🔍 Tìm theo biển số..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {filteredVehicles.length === 0 ? (
+          <p>Không tìm thấy xe nào.</p>
         ) : (
-          <table className="table table-striped">
-            <thead>
+          <table className="table table-hover table-bordered align-middle">
+            <thead className="table-light">
               <tr>
-                <th>Biển số (Key)</th>
+                <th>Biển số</th>
                 <th>Hãng xe</th>
                 <th>Model</th>
+                <th>Màu sắc</th>
                 <th>Chủ xe</th>
+                <th>Ngày đăng ký</th>
                 <th>Trạng thái</th>
               </tr>
             </thead>
             <tbody>
-              {vehicles.map((item, index) => {
+              {filteredVehicles.map((item, index) => {
                 const r = item.Record || {};
                 return (
                   <tr key={index}>
-                    <td>{item.Key || r.LicensePlate || 'N/A'}</td>
-                    <td>{r.Brand || r.make || 'N/A'}</td>
-                    <td>{r.Model || r.model || 'N/A'}</td>
-                    <td>{r.Owner || r.owner || 'N/A'}</td>
-                    <td>{r.Status || r.status || 'N/A'}</td>
+                    <td>{item.Key}</td>
+                    <td>{r.make}</td>
+                    <td>{r.model}</td>
+                    <td>{r.color}</td>
+                    <td>{r.owner}</td>
+                    <td>{r.registrationDate}</td>
+                    <td>{r.status}</td>
                   </tr>
                 );
               })}

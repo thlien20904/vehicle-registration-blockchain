@@ -1,38 +1,132 @@
-.App {
+/* 🌟 Căn chỉnh chung */
+body {
+  background-color: #f8f9fa;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #343a40;
+}
+
+/* 🎨 Tiêu đề chính */
+.title {
+  font-size: 2rem;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 2px #dee2e6;
+}
+
+/* 📝 Card chung */
+.card {
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Card header */
+.card-header {
+  font-size: 1.2rem;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #dee2e6;
+}
+
+/* Bảng danh sách xe */
+.table {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.table th {
+  background-color: #343a40;
+  color: white;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.table td {
+  vertical-align: middle !important;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+/* Bảng lịch sử xe */
+.table-bordered th, .table-bordered td {
+  border: 1px solid #dee2e6;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+/* Button */
+.btn {
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
 }
 
-.App-link {
-  color: #61dafb;
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Navbar */
+.nav-tabs .nav-link {
+  font-weight: 500;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.nav-tabs .nav-link.active {
+  color: #fff;
+  background-color: #007bff;
+  border-color: #007bff #007bff #fff;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+/* Input tìm kiếm */
+input.form-control {
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #ced4da;
+  transition: all 0.2s ease-in-out;
+}
+
+input.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0,123,255,0.3);
+  outline: none;
+}
+
+/* Footer */
+footer {
+  font-size: 0.85rem;
+}
+
+/* Spinner */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Tab content spacing */
+.mt-3 {
+  margin-top: 1rem !important;
+}
+
+/* Card body spacing */
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Buttons nhỏ */
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* Highlight text */
+.text-primary {
+  color: #007bff !important;
+}
+
+.text-success {
+  color: #28a745 !important;
+}
+
+.text-info {
+  color: #17a2b8 !important;
+}
+
+/* Responsive table */
+.table-responsive {
+  overflow-x: auto;
 }
